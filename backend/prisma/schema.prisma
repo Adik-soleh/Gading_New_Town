@@ -1,0 +1,246 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ──── Enums ────
+
+enum UserRole {
+  RT
+  WARGA
+}
+
+enum ResidentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum OwnershipType {
+  OWNER
+  TENANT
+}
+
+enum FamilyRole {
+  KEPALA_KELUARGA
+  ISTRI
+  ANAK
+  LAINNYA
+}
+
+enum PaymentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum PermitStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum MutationType {
+  PINDAH_MASUK
+  PINDAH_KELUAR
+}
+
+enum MutationStatus {
+  PENDING
+  VERIFIED
+}
+
+enum ReportStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+}
+
+// ──── Models ────
+
+model User {
+  id       String   @id @default(cuid())
+  email    String   @unique
+  name     String
+  password String
+  role     UserRole @default(WARGA)
+  image    String?
+
+  residentId Int?      @unique
+  resident   Resident? @relation(fields: [residentId], references: [id])
+
+  logs    ActivityLog[]
+  reports Report[]
+
+  sessions Session[]
+  accounts Account[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Better Auth session model
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Better Auth account model (for OAuth providers)
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+// Better Auth verification model
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Household {
+  id            Int           @id @default(autoincrement())
+  kkNumber      String        @unique
+  address       String
+  block         String
+  houseNumber   String
+  ownershipType OwnershipType @default(OWNER)
+
+  headOfFamilyId Int?
+  headOfFamily   Resident? @relation("HeadOfFamily", fields: [headOfFamilyId], references: [id])
+
+  residents Resident[]
+  payments  IPLPayment[]
+  permits   RenovationPermit[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Resident {
+  id         Int            @id @default(autoincrement())
+  nik        String         @unique
+  name       String
+  phone      String?
+  familyRole FamilyRole     @default(KEPALA_KELUARGA)
+  status     ResidentStatus @default(ACTIVE)
+
+  householdId Int
+  household   Household @relation(fields: [householdId], references: [id])
+
+  mutations Mutation[]
+  user      User?
+  headOf    Household[] @relation("HeadOfFamily")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model IPLPayment {
+  id          Int       @id @default(autoincrement())
+  householdId Int
+  household   Household @relation(fields: [householdId], references: [id])
+
+  month      Int
+  year       Int
+  amount     Decimal
+  proofImage String?
+  status     PaymentStatus @default(PENDING)
+  notes      String?
+  verifiedAt DateTime?
+  verifiedBy String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([householdId, month, year])
+}
+
+model Mutation {
+  id         Int      @id @default(autoincrement())
+  residentId Int
+  resident   Resident @relation(fields: [residentId], references: [id])
+
+  type               MutationType
+  date               DateTime
+  originAddress      String?
+  destinationAddress String?
+  block              String?
+  reason             String?
+  status             MutationStatus @default(PENDING)
+  attachment         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RenovationPermit {
+  id          Int       @id @default(autoincrement())
+  householdId Int
+  household   Household @relation(fields: [householdId], references: [id])
+
+  category    String
+  description String
+  startDate   DateTime
+  endDate     DateTime?
+  status      PermitStatus @default(PENDING)
+  rtNotes     String?
+  attachment  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Report {
+  id          Int    @id @default(autoincrement())
+  subject     String
+  description String
+  category    String
+
+  reporterId    String?
+  reporter      User?   @relation(fields: [reporterId], references: [id])
+  reporterName  String?
+  reporterBlock String?
+
+  status   ReportStatus @default(NEW)
+  response String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ActivityLog {
+  id        Int     @id @default(autoincrement())
+  action    String
+  category  String
+  reference String?
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+}

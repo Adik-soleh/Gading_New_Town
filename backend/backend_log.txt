@@ -1,0 +1,22 @@
+
+> backend@0.0.1 start:dev
+> nest start --watch
+
+[2J[3J[H[[90m11:41:40 AM[0m] Starting compilation in watch mode...
+
+[[90m11:41:42 AM[0m] Found 0 errors. Watching for file changes.
+
+node:internal/modules/cjs/loader:1200
+    throw new ERR_REQUIRE_ESM(filename, true);
+    ^
+
+Error [ERR_REQUIRE_ESM]: require() of ES Module /Users/sm/Desktop/Dashboard_new_town/backend/node_modules/better-auth/dist/index.mjs not supported.
+Instead change the require of /Users/sm/Desktop/Dashboard_new_town/backend/node_modules/better-auth/dist/index.mjs to a dynamic import() which is available in all CommonJS modules.
+    at Object.<anonymous> (/Users/sm/Desktop/Dashboard_new_town/backend/dist/src/modules/auth/auth.service.js:48:23)
+    at Object.<anonymous> (/Users/sm/Desktop/Dashboard_new_town/backend/dist/src/modules/auth/auth.module.js:11:24)
+    at Object.<anonymous> (/Users/sm/Desktop/Dashboard_new_town/backend/dist/src/app.module.js:15:23)
+    at Object.<anonymous> (/Users/sm/Desktop/Dashboard_new_town/backend/dist/src/main.js:4:22) {
+  code: 'ERR_REQUIRE_ESM'
+}
+
+Node.js v18.20.8
