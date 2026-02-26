@@ -1,6 +1,6 @@
 import Modal from './Modal';
 
-function IPLDetailModal({ isOpen, onClose, data }) {
+function IPLDetailModal({ isOpen, onClose, data, hideAdminActions = false }) {
     if (!data) return null;
 
     return (
@@ -64,7 +64,7 @@ function IPLDetailModal({ isOpen, onClose, data }) {
                     >
                         Tutup
                     </button>
-                    {data.status === 'PENDING' && (
+                    {!hideAdminActions && data.status === 'PENDING' && (
                         <button className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors shadow-lg shadow-green-600/25">
                             Verifikasi Pembayaran
                         </button>

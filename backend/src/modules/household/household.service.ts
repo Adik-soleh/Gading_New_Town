@@ -15,11 +15,17 @@ export class HouseholdService {
         limit?: number;
         search?: string;
         block?: string;
+        user?: any;
     }) {
-        const { page = 1, limit = 10, search, block } = params;
+        const { page = 1, limit = 10, search, block, user } = params;
         const skip = (page - 1) * limit;
 
         const where: any = {};
+
+        // RT only sees their managed households
+        if (user?.role === 'RT' && user?.id) {
+            where.rtId = user.id;
+        }
 
         if (search) {
             where.OR = [

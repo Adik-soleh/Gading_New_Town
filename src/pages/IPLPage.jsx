@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import IPLDetailModal from '../components/IPLDetailModal';
 import ImagePreviewModal from '../components/ImagePreviewModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { ipl } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import ResidentIPL from '../components/ResidentIPL';
+import { Toast } from '../lib/sweetalert';
 const avatarColors = [
     { bg: 'bg-slate-200 dark:bg-slate-700', text: 'text-slate-600 dark:text-slate-300' },
     { bg: 'bg-blue-100 dark:bg-blue-900/50', text: 'text-blue-600 dark:text-blue-300' },
@@ -98,14 +100,31 @@ function IPLPage() {
         try {
             if (type === 'approve') {
                 await ipl.verify(actionData.id);
+                Toast.fire({ icon: 'success', title: 'Pembayaran IPL berhasil diverifikasi!' });
             } else {
                 await ipl.reject(actionData.id, reason || 'Bukti pembayaran ditolak oleh Admin');
+                Toast.fire({ icon: 'success', title: 'Pembayaran IPL berhasil ditolak!' });
             }
             loadData();
         } catch (err) {
             console.error('Action failed:', err);
+            Toast.fire({ icon: 'error', title: 'Gagal memproses verifikasi!' });
         }
         setConfirmAction({ isOpen: false, type: '', data: null });
+    };
+
+    const handleRemind = async (item) => {
+        try {
+            await ipl.remind({
+                householdId: item.householdId,
+                month: item.month,
+                year: item.year
+            });
+            Toast.fire({ icon: 'success', title: 'Pengingat berhasil dikirim!' });
+        } catch (err) {
+            console.error('Failed to send reminder:', err);
+            Toast.fire({ icon: 'error', title: err.message || 'Gagal mengirim pengingat!' });
+        }
     };
 
     const statusBadge = (status) => {
@@ -138,8 +157,51 @@ function IPLPage() {
         }
     };
 
+    const handleExportExcel = async () => {
+        try {
+            const params = { page: 1, limit: 10000, month: selectedMonth, year: selectedYear };
+            if (statusFilter) params.status = statusFilter;
+            const res = await ipl.list(params);
+            const allData = res.data || [];
+
+            if (allData.length === 0) {
+                alert('Tidak ada data yang bisa diexport');
+                return;
+            }
+
+            const exportData = allData.map(item => {
+                const proofUrl = item.proofImage
+                    ? (item.proofImage.startsWith('http') ? item.proofImage : `http://localhost:3001${item.proofImage}`)
+                    : '-';
+
+                return {
+                    'Nama Warga': item.household?.headOfFamily?.name || 'N/A',
+                    'Blok / Nomor': item.household ? `Block ${item.household.block} No. ${item.household.houseNumber}` : '-',
+                    'Periode': `${monthNames[item.month]} ${item.year}`,
+                    'Jumlah Tagihan (Rp)': item.amount,
+                    'Status': item.status === 'VERIFIED' ? 'Lunas' : item.status === 'PENDING' ? 'Pending' : item.status === 'REJECTED' ? 'Ditolak' : 'Belum Bayar',
+                    'Tanggal Diperbarui': item.createdAt ? new Date(item.createdAt).toLocaleString('id-ID') : '-',
+                    'Link Bukti': proofUrl
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Data IPL");
+            XLSX.writeFile(wb, `Laporan_IPL_${monthNames[selectedMonth]}_${selectedYear}.xlsx`);
+        } catch (error) {
+            console.error('Failed to export:', error);
+            alert('Gagal mengexport file Excel');
+        }
+    };
+
     if (isWarga) {
-        return <ResidentIPL user={user} data={data} loading={loading} meta={meta} setMeta={setMeta} onUploadProof={handleUploadProof} onSuccess={loadData} summary={summary} />;
+        return (
+            <>
+                <ResidentIPL user={user} data={data} loading={loading} meta={meta} setMeta={setMeta} onUploadProof={handleUploadProof} onSuccess={loadData} summary={summary} />
+                <ImagePreviewModal isOpen={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} imageUrl={previewImage} />
+            </>
+        );
     }
 
     return (
@@ -175,7 +237,7 @@ function IPLPage() {
                         </select>
                     </div>
                     {user?.role !== 'WARGA' && (
-                        <button className="h-[38px] px-4 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors shadow-lg shadow-green-600/25 flex items-center gap-2">
+                        <button onClick={handleExportExcel} className="h-[38px] px-4 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors shadow-lg shadow-green-600/25 flex items-center gap-2">
                             <span className="material-symbols-outlined text-[18px]">table_view</span>
                             <span>Export Excel</span>
                         </button>
@@ -330,6 +392,11 @@ function IPLPage() {
                                                 ) : (
                                                     <button onClick={() => openDetail(item)} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-xs text-slate-600 dark:text-slate-300 rounded transition-colors">
                                                         Detail
+                                                    </button>
+                                                )}
+                                                {item.status === 'UNPAID' && user?.role !== 'WARGA' && (
+                                                    <button onClick={() => handleRemind(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="Kirim Pengingat">
+                                                        <span className="material-symbols-outlined text-[20px]">notifications_active</span>
                                                     </button>
                                                 )}
                                             </div>

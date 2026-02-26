@@ -66,4 +66,10 @@ export class IPLController {
     async reject(@Param('id') id: string, @Body() dto: RejectIPLDto, @Req() req: Request) {
         return this.iplService.reject(parseInt(id), dto, (req as any).user?.id);
     }
+
+    @Post('remind')
+    @Roles('RT')
+    async sendReminder(@Body() dto: { householdId: number, month: number, year: number }, @Req() req: Request) {
+        return this.iplService.sendReminder(dto.householdId, dto.month, dto.year, (req as any).user?.id);
+    }
 }

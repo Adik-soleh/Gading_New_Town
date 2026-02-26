@@ -2,8 +2,9 @@ import { IsString, IsOptional, IsDateString, IsInt, IsEnum } from 'class-validat
 import { MutationType } from '@prisma/client';
 
 export class CreateMutationDto {
+    @IsOptional()
     @IsInt()
-    residentId: number;
+    residentId?: number;
 
     @IsEnum(MutationType)
     type: MutationType;

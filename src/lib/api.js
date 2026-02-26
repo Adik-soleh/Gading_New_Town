@@ -96,6 +96,7 @@ export const ipl = {
     create: (data) => request('/api/ipl', { method: 'POST', body: data }),
     verify: (id, notes) => request(`/api/ipl/${id}/verify`, { method: 'PATCH', body: { notes } }),
     reject: (id, notes) => request(`/api/ipl/${id}/reject`, { method: 'PATCH', body: { notes } }),
+    remind: (data) => request('/api/ipl/remind', { method: 'POST', body: data }),
 };
 
 // ──── Permits ────
@@ -152,4 +153,15 @@ export const upload = {
         formData.append('file', file);
         return request('/api/upload', { method: 'POST', body: formData });
     },
+};
+
+// ──── Notifications ────
+export const notifications = {
+    list: (params = {}) => {
+        const query = new URLSearchParams(params).toString();
+        return request(`/api/notifications?${query}`);
+    },
+    unreadCount: () => request('/api/notifications/unread-count'),
+    markAsRead: (id) => request(`/api/notifications/${id}/read`, { method: 'PATCH' }),
+    markAllAsRead: () => request('/api/notifications/read-all', { method: 'PATCH' }),
 };

@@ -4,6 +4,7 @@ import AddRequestModal from '../components/AddRequestModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { permits, upload } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { Toast } from '../lib/sweetalert';
 
 function getInitials(n) { return n ? n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : '??'; }
 function fmtDate(d) { return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }); }
@@ -58,11 +59,21 @@ function IzinPage() {
 
     const handleConfirmAction = async () => {
         try {
-            if (confirmAction.type === 'approve') await permits.approve(confirmAction.data.id, 'Disetujui');
-            else if (confirmAction.type === 'reject') await permits.reject(confirmAction.data.id, 'Ditolak');
-            else if (confirmAction.type === 'delete') await permits.delete(confirmAction.data.id);
+            if (confirmAction.type === 'approve') {
+                await permits.approve(confirmAction.data.id, 'Disetujui');
+                Toast.fire({ icon: 'success', title: 'Izin berhasil disetujui!' });
+            } else if (confirmAction.type === 'reject') {
+                await permits.reject(confirmAction.data.id, 'Ditolak');
+                Toast.fire({ icon: 'success', title: 'Izin berhasil ditolak!' });
+            } else if (confirmAction.type === 'delete') {
+                await permits.delete(confirmAction.data.id);
+                Toast.fire({ icon: 'success', title: 'Izin berhasil dihapus!' });
+            }
             loadData();
-        } catch (err) { console.error('Action failed:', err); }
+        } catch (err) {
+            console.error('Action failed:', err);
+            Toast.fire({ icon: 'error', title: 'Gagal memproses tindakan!' });
+        }
         setConfirmAction({ isOpen: false, type: '', data: null });
     };
 
@@ -195,8 +206,10 @@ function IzinPage() {
                         };
                         if (isEdit) {
                             await permits.update(editData.id, payload);
+                            Toast.fire({ icon: 'success', title: 'Izin berhasil diperbarui!' });
                         } else {
                             await permits.create(payload);
+                            Toast.fire({ icon: 'success', title: 'Izin berhasil diajukan!' });
                         }
                         setIsAddOpen(false);
                         setIsEdit(false);
@@ -204,6 +217,7 @@ function IzinPage() {
                         loadData();
                     } catch (err) {
                         console.error('Failed to create/update permit:', err);
+                        Toast.fire({ icon: 'error', title: 'Gagal menyimpan data izin!' });
                     }
                 }}
             />

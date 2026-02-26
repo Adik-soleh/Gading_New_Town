@@ -39,7 +39,7 @@ export class MutationController {
 
     @Post()
     async create(@Body() dto: CreateMutationDto, @Req() req: Request) {
-        return this.mutationService.create(dto, (req as any).user?.id);
+        return this.mutationService.create(dto, (req as any).user);
     }
 
     @Patch(':id/verify')

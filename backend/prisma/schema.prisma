@@ -71,8 +71,11 @@ model User {
   residentId Int?      @unique
   resident   Resident? @relation(fields: [residentId], references: [id])
 
-  logs    ActivityLog[]
-  reports Report[]
+  managedHouseholds Household[] @relation("ManagedHouseholds")
+
+  logs          ActivityLog[]
+  reports       Report[]
+  notifications Notification[]
 
   sessions Session[]
   accounts Account[]
@@ -129,6 +132,9 @@ model Household {
   block         String
   houseNumber   String
   ownershipType OwnershipType @default(OWNER)
+
+  rtId String?
+  rt   User?   @relation("ManagedHouseholds", fields: [rtId], references: [id])
 
   headOfFamilyId Int?
   headOfFamily   Resident? @relation("HeadOfFamily", fields: [headOfFamilyId], references: [id])
@@ -241,6 +247,20 @@ model ActivityLog {
 
   userId String?
   user   User?   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id     Int    @id @default(autoincrement())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type        String // IPL_PAYMENT, PERMIT_REQUEST, MUTATION_REQUEST, REPORT
+  title       String
+  message     String
+  referenceId String?
+  isRead      Boolean @default(false)
 
   createdAt DateTime @default(now())
 }

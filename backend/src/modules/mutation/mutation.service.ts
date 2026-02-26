@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityLogService } from '../activity-log/activity-log.service';
+import { NotificationService } from '../notification/notification.service';
 import { CreateMutationDto } from './dto/mutation.dto';
 import { MutationStatus, MutationType } from '@prisma/client';
 
@@ -9,6 +10,7 @@ export class MutationService {
     constructor(
         private prisma: PrismaService,
         private logService: ActivityLogService,
+        private notificationService: NotificationService,
     ) { }
 
     async findAll(params: {
@@ -33,6 +35,9 @@ export class MutationService {
             if (!household) return { data: [], meta: { total: 0, page, limit, totalPages: 0 } };
             const residentIds = household.residents.map(r => r.id);
             where.residentId = { in: residentIds };
+        } else if (user?.role === 'RT') {
+            // RT only sees mutations from their managed households
+            where.resident = { household: { rtId: user.id } };
         }
 
         const [data, total] = await Promise.all([
@@ -66,6 +71,8 @@ export class MutationService {
             if (!household) return { total: 0, incoming: 0, outgoing: 0, pendingIncoming: 0 };
             const residentIds = household.residents.map(r => r.id);
             where.residentId = { in: residentIds };
+        } else if (user?.role === 'RT') {
+            where.resident = { household: { rtId: user.id } };
         }
 
         const [total, incoming, outgoing] = await Promise.all([
@@ -103,10 +110,28 @@ export class MutationService {
         return mutation;
     }
 
-    async create(dto: CreateMutationDto, userId?: string) {
+    async create(dto: CreateMutationDto, user?: any) {
+        let finalResidentId = dto.residentId;
+
+        // Auto-resolve residentId for WARGA
+        if (!finalResidentId && (user?.role === 'WARGA')) {
+            const userRecord = await this.prisma.user.findUnique({
+                where: { id: user.id },
+                select: { residentId: true },
+            });
+            if (!userRecord?.residentId) {
+                throw new NotFoundException('Resident data not found for this user');
+            }
+            finalResidentId = userRecord.residentId;
+        }
+
+        if (!finalResidentId) {
+            throw new NotFoundException('Resident ID is required');
+        }
+
         const mutation = await this.prisma.mutation.create({
             data: {
-                residentId: dto.residentId,
+                residentId: finalResidentId,
                 type: dto.type,
                 date: new Date(dto.date),
                 originAddress: dto.originAddress,
@@ -115,14 +140,23 @@ export class MutationService {
                 reason: dto.reason,
                 attachment: dto.attachment,
             },
-            include: { resident: true },
+            include: { resident: { include: { household: true } } },
         });
 
         await this.logService.log({
             action: `New mutation: ${dto.type === 'PINDAH_MASUK' ? 'Incoming' : 'Outgoing'} - ${mutation.resident.name}`,
             category: 'Data Entry',
             reference: `MUT-${mutation.id}`,
-            userId,
+            userId: user?.id,
+        });
+
+        // Notify RT
+        const typeLabel = dto.type === 'PINDAH_MASUK' ? 'Pindah Masuk' : 'Pindah Keluar';
+        await this.notificationService.notifyHouseholdRT(mutation.resident.householdId, {
+            type: 'MUTATION_REQUEST',
+            title: 'Pengajuan Mutasi Baru',
+            message: `${mutation.resident.name} mengajukan mutasi ${typeLabel}`,
+            referenceId: `MUT-${mutation.id}`,
         });
 
         return mutation;

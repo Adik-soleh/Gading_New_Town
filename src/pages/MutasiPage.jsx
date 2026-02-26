@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import RequestDetailModal from '../components/RequestDetailModal';
 import AddRequestModal from '../components/AddRequestModal';
 import ConfirmationModal from '../components/ConfirmationModal';
-import { mutations } from '../lib/api';
+import { mutations, upload } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 
 function getInitials(n) { return n ? n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : '??'; }
@@ -19,7 +19,7 @@ function MutasiPage() {
     const [stats, setStats] = useState({ total: 0, incoming: 0, outgoing: 0, pendingIncoming: 0 });
     const [meta, setMeta] = useState({ total: 0, page: 1, limit: 10, totalPages: 0 });
     const [loading, setLoading] = useState(true);
-    const [tab, setTab] = useState('MOVE_IN');
+    const [tab, setTab] = useState('PINDAH_MASUK');
 
     useEffect(() => { loadData(); }, [meta.page, tab]);
 
@@ -38,13 +38,14 @@ function MutasiPage() {
     }
 
     const openDetail = (item) => {
+        const hh = item.resident?.household;
         setSelectedMutasi({
-            id: item.id, type: 'mutasi', mutasiType: item.type === 'MOVE_IN' ? 'Pindah Masuk' : 'Pindah Keluar',
+            id: item.id, type: 'mutasi', mutasiType: item.type === 'PINDAH_MASUK' ? 'Pindah Masuk' : 'Pindah Keluar',
             name: item.resident?.name || 'N/A',
-            block: item.household ? `Block ${item.household.block} / No. ${item.household.houseNumber}` : '-',
-            date: fmtDate(item.moveDate), originAddress: item.previousAddress || item.destinationAddress || '-',
+            block: hh ? `Block ${hh.block} / No. ${hh.houseNumber}` : '-',
+            date: fmtDate(item.date), originAddress: item.originAddress || item.destinationAddress || '-',
             status: item.status === 'VERIFIED' ? 'Disetujui' : 'Pending',
-            reason: item.reason, attachment: !!item.supportingDocUrl,
+            reason: item.reason, attachment: item.attachment || null,
         });
         setIsDetailOpen(true);
     };
@@ -100,10 +101,10 @@ function MutasiPage() {
 
             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
                 <div className="flex border-b border-slate-200 dark:border-slate-700 px-6 pt-2">
-                    <button onClick={() => { setTab('MOVE_IN'); setMeta(m => ({ ...m, page: 1 })); }} className={`px-4 py-4 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${tab === 'MOVE_IN' ? 'text-mutasi-primary border-mutasi-primary' : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300'}`}>
+                    <button onClick={() => { setTab('PINDAH_MASUK'); setMeta(m => ({ ...m, page: 1 })); }} className={`px-4 py-4 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${tab === 'PINDAH_MASUK' ? 'text-mutasi-primary border-mutasi-primary' : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300'}`}>
                         <span className="material-symbols-outlined text-[18px]">login</span>Warga Masuk
                     </button>
-                    <button onClick={() => { setTab('MOVE_OUT'); setMeta(m => ({ ...m, page: 1 })); }} className={`px-4 py-4 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${tab === 'MOVE_OUT' ? 'text-mutasi-primary border-mutasi-primary' : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300'}`}>
+                    <button onClick={() => { setTab('PINDAH_KELUAR'); setMeta(m => ({ ...m, page: 1 })); }} className={`px-4 py-4 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${tab === 'PINDAH_KELUAR' ? 'text-mutasi-primary border-mutasi-primary' : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300'}`}>
                         <span className="material-symbols-outlined text-[18px]">logout</span>Warga Keluar
                     </button>
                 </div>
@@ -113,7 +114,7 @@ function MutasiPage() {
                             <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700">
                                 <th className="py-4 px-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Resident Name</th>
                                 <th className="py-4 px-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Date of Change</th>
-                                <th className="py-4 px-6 text-xs font-semibold uppercase tracking-wider text-slate-500">{tab === 'MOVE_IN' ? 'Origin' : 'Destination'}</th>
+                                <th className="py-4 px-6 text-xs font-semibold uppercase tracking-wider text-slate-500">{tab === 'PINDAH_MASUK' ? 'Origin' : 'Destination'}</th>
                                 <th className="py-4 px-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Block</th>
                                 <th className="py-4 px-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
                                 <th className="py-4 px-6 text-xs font-semibold uppercase tracking-wider text-slate-500 text-right">Actions</th>
@@ -127,7 +128,8 @@ function MutasiPage() {
                             ) : data.map((item, idx) => {
                                 const name = item.resident?.name || 'N/A';
                                 const c = colors[idx % colors.length];
-                                const block = item.household ? `Block ${item.household.block} / No. ${item.household.houseNumber}` : '-';
+                                const hh = item.resident?.household;
+                                const block = hh ? `Block ${hh.block} / No. ${hh.houseNumber}` : '-';
                                 const isVerified = item.status === 'VERIFIED';
                                 return (
                                     <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group">
@@ -137,8 +139,8 @@ function MutasiPage() {
                                                 <div><p className="text-sm font-medium text-slate-900 dark:text-white">{name}</p></div>
                                             </div>
                                         </td>
-                                        <td className="py-4 px-6 text-sm text-slate-600 dark:text-slate-300">{fmtDate(item.moveDate)}</td>
-                                        <td className="py-4 px-6 text-sm text-slate-600 dark:text-slate-300">{tab === 'MOVE_IN' ? (item.previousAddress || '-') : (item.destinationAddress || '-')}</td>
+                                        <td className="py-4 px-6 text-sm text-slate-600 dark:text-slate-300">{fmtDate(item.date)}</td>
+                                        <td className="py-4 px-6 text-sm text-slate-600 dark:text-slate-300">{tab === 'PINDAH_MASUK' ? (item.originAddress || '-') : (item.destinationAddress || '-')}</td>
                                         <td className="py-4 px-6 text-sm"><span className="inline-flex items-center px-2 py-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium">{block}</span></td>
                                         <td className="py-4 px-6">
                                             {isVerified ? (
@@ -174,17 +176,25 @@ function MutasiPage() {
                 type="mutasi"
                 onSave={async (formData) => {
                     try {
+                        let attachmentUrl;
+                        if (formData.attachment && typeof formData.attachment !== 'string') {
+                            const uploadRes = await upload.file(formData.attachment);
+                            attachmentUrl = uploadRes.url || uploadRes.path;
+                        }
+
                         await mutations.create({
-                            type: formData.mutasiType === 'Pindah Masuk' ? 'MOVE_IN' : 'MOVE_OUT',
-                            moveDate: new Date().toISOString(),
-                            previousAddress: formData.originAddress || undefined,
+                            type: formData.mutasiType === 'Pindah Masuk' ? 'PINDAH_MASUK' : 'PINDAH_KELUAR',
+                            date: new Date().toISOString(),
+                            originAddress: formData.originAddress || undefined,
                             destinationAddress: formData.destinationAddress || undefined,
                             reason: formData.reason || undefined,
+                            attachment: attachmentUrl || undefined,
                         });
                         setIsAddOpen(false);
                         loadData();
                     } catch (err) {
                         console.error('Failed to create mutation:', err);
+                        alert('Gagal mengajukan mutasi: ' + err.message);
                     }
                 }}
             />

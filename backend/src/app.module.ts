@@ -14,6 +14,7 @@ import { MutationModule } from './modules/mutation/mutation.module';
 import { ReportModule } from './modules/report/report.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { UploadModule } from './modules/upload/upload.module';
+import { NotificationModule } from './modules/notification/notification.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { UploadModule } from './modules/upload/upload.module';
     ReportModule,
     DashboardModule,
     UploadModule,
+    NotificationModule,
   ],
 })
 export class AppModule { }

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityLogService } from '../activity-log/activity-log.service';
+import { NotificationService } from '../notification/notification.service';
 import { CreateReportDto, UpdateReportStatusDto, RespondReportDto } from './dto/report.dto';
 
 @Injectable()
@@ -8,6 +9,7 @@ export class ReportService {
     constructor(
         private prisma: PrismaService,
         private logService: ActivityLogService,
+        private notificationService: NotificationService,
     ) { }
 
     async findAll(params: {
@@ -83,6 +85,14 @@ export class ReportService {
             userId,
         });
 
+        // Notify all RTs (reports are not household-scoped)
+        await this.notificationService.notifyAllRTs({
+            type: 'REPORT',
+            title: 'Laporan Warga Baru',
+            message: `${dto.reporterName || 'Warga'} melaporkan: ${dto.subject}`,
+            referenceId: `RPT-${report.id}`,
+        });
+
         return report;
     }
 
@@ -102,6 +112,16 @@ export class ReportService {
             userId,
         });
 
+        if (report.reporterId) {
+            await this.notificationService.create({
+                userId: report.reporterId,
+                type: 'REPORT',
+                title: 'Status Laporan Diperbarui',
+                message: `Status laporan "${report.subject}" telah diubah menjadi ${dto.status}.`,
+                referenceId: `RPT-${report.id}`,
+            });
+        }
+
         return updated;
     }
 
@@ -120,6 +140,16 @@ export class ReportService {
             reference: `RPT-${report.id}`,
             userId,
         });
+
+        if (report.reporterId) {
+            await this.notificationService.create({
+                userId: report.reporterId,
+                type: 'REPORT',
+                title: 'Tanggapan Baru',
+                message: `RT telah memberikan tanggapan pada laporan "${report.subject}".`,
+                referenceId: `RPT-${report.id}`,
+            });
+        }
 
         return updated;
     }

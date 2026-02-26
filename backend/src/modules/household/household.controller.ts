@@ -13,6 +13,7 @@ export class HouseholdController {
     @Get()
     @Roles('RT')
     async findAll(
+        @Req() req: Request,
         @Query('page') page?: string,
         @Query('limit') limit?: string,
         @Query('search') search?: string,
@@ -23,6 +24,7 @@ export class HouseholdController {
             limit: limit ? parseInt(limit) : 10,
             search,
             block,
+            user: (req as any).user,
         });
     }
 

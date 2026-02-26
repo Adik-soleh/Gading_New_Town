@@ -69,11 +69,13 @@ export class DashboardService {
         ] = await Promise.all([
             this.prisma.household.count({
                 where: {
+                    rtId: user?.id,
                     NOT: { residents: { some: { user: { role: 'RT' } } } }
                 }
             }),
             this.prisma.household.count({
                 where: {
+                    rtId: user?.id,
                     NOT: { residents: { some: { user: { role: 'RT' } } } },
                     payments: {
                         none: {
@@ -85,10 +87,10 @@ export class DashboardService {
                 },
             }),
             this.prisma.iPLPayment.count({
-                where: { status: PaymentStatus.PENDING },
+                where: { status: PaymentStatus.PENDING, household: { rtId: user?.id } },
             }),
             this.prisma.renovationPermit.count({
-                where: { status: PermitStatus.PENDING },
+                where: { status: PermitStatus.PENDING, household: { rtId: user?.id } },
             }),
         ]);
 
@@ -104,6 +106,7 @@ export class DashboardService {
         const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
         const totalHouseholds = await this.prisma.household.count({
             where: {
+                rtId: user?.role === 'RT' ? user.id : undefined,
                 NOT: { residents: { some: { user: { role: 'RT' } } } }
             }
         });
@@ -133,12 +136,13 @@ export class DashboardService {
 
         const chartData = await Promise.all(
             months.map(async (month) => {
+                const householdFilter = user?.role === 'RT' ? { rtId: user.id } : {};
                 const [paid, pending] = await Promise.all([
                     this.prisma.iPLPayment.count({
-                        where: { month, year, status: PaymentStatus.VERIFIED },
+                        where: { month, year, status: PaymentStatus.VERIFIED, household: householdFilter },
                     }),
                     this.prisma.iPLPayment.count({
-                        where: { month, year, status: PaymentStatus.PENDING },
+                        where: { month, year, status: PaymentStatus.PENDING, household: householdFilter },
                     }),
                 ]);
 

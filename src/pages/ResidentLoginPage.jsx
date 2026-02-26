@@ -113,17 +113,24 @@ export default function ResidentLoginPage() {
                         <div className="mt-12 text-center">
                             <p className="text-slate-500 dark:text-slate-400 text-sm">
                                 Data NIK tidak terdaftar?
-                                <a className="text-blue-600 ml-1 font-semibold hover:underline" href="#">Hubungi Admin RT/RW</a>
+                                <a
+                                    className="text-blue-600 ml-1 font-semibold hover:underline"
+                                    href="https://wa.me/62895360103563?text=Halo%20Admin%20RT/RW%2C%20saya%20ingin%20melakukan%20konfirmasi%20karena%20data%20NIK%20saya%20belum%20terdaftar.%20Mohon%20bantuannya.%20Terima%20kasih."
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    Hubungi Admin RT/RW
+                                </a>
                             </p>
                         </div>
-                        <div className="mt-6 text-center">
+                        {/* <div className="mt-6 text-center">
                             <p className="text-slate-500 dark:text-slate-400 text-sm">
                                 Admin / Ketua RT?
                                 <button onClick={() => navigate('/admin')} className="text-blue-600 ml-1 font-semibold hover:underline">
                                     Login di sini
                                 </button>
                             </p>
-                        </div>
+                        </div> */}
                     </div>
                 </div>
             </div>

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { upload, ipl } from '../lib/api';
+import { dateFormatHistory } from '../lib/datePlugin';
+import IPLDetailModal from './IPLDetailModal';
 
 const avatarColors = [
     { bg: 'bg-slate-200 dark:bg-slate-700', text: 'text-slate-600 dark:text-slate-300' },
@@ -19,6 +21,8 @@ function formatCurrency(amount) {
 
 function ResidentIPL({ user, data, loading, meta, setMeta, onUploadProof, onSuccess, summary }) {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [selectedIPLData, setSelectedIPLData] = useState(null);
     const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
     const currentDate = new Date();
@@ -94,6 +98,18 @@ function ResidentIPL({ user, data, loading, meta, setMeta, onUploadProof, onSucc
     };
 
     const currentStatus = currentMonthStatus();
+
+    const openDetailModal = (item) => {
+        setSelectedIPLData({
+            name: item.household?.headOfFamily?.name || user?.name || 'N/A',
+            block: item.household ? `Block ${item.household.block} No. ${item.household.houseNumber}` : '-',
+            period: `${monthNames[item.month]} ${item.year}`,
+            amount: formatCurrency(item.amount),
+            status: item.status,
+            notes: item.notes,
+        });
+        setIsDetailModalOpen(true);
+    };
 
     return (
         <div className="max-w-7xl mx-auto w-full font-display text-text-main">
@@ -178,7 +194,7 @@ function ResidentIPL({ user, data, loading, meta, setMeta, onUploadProof, onSucc
                                 data.map((item) => {
                                     const shortMonth = monthNames[item.month]?.substring(0, 3).toUpperCase() || '???';
                                     const fullPeriod = `${monthNames[item.month]} ${item.year}`;
-                                    const dateStr = item.proofUploadedAt ? new Date(item.proofUploadedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+                                    const dateStr = item.createdAt ? dateFormatHistory(item.createdAt) : '-';
 
                                     return (
                                         <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
@@ -194,23 +210,29 @@ function ResidentIPL({ user, data, loading, meta, setMeta, onUploadProof, onSucc
                                                 {statusBadge(item.status)}
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                {item.proofImage ? (
-                                                    <button onClick={() => onUploadProof && onUploadProof(item, 'view')} className="text-primary hover:text-blue-700 dark:hover:text-blue-400 text-sm font-semibold">Lihat Bukti</button>
-                                                ) : item.status === 'REJECTED' ? (
-                                                    <button onClick={() => {
-                                                        setSelectedMonth(item.month);
-                                                        setSelectedYear(item.year);
-                                                        setAmount(item.amount || summary?.target || 250000);
-                                                        setIsUploadModalOpen(true);
-                                                    }} className="text-primary hover:text-blue-700 dark:hover:text-blue-400 text-sm font-semibold">Re-upload</button>
-                                                ) : (
-                                                    <button onClick={() => {
-                                                        setSelectedMonth(item.month);
-                                                        setSelectedYear(item.year);
-                                                        setAmount(item.amount || summary?.target || 250000);
-                                                        setIsUploadModalOpen(true);
-                                                    }} className="text-slate-400 hover:text-primary text-sm font-semibold">Unggah Bukti</button>
-                                                )}
+                                                <div className="flex items-center justify-end gap-3">
+                                                    {item.proofImage ? (
+                                                        <button onClick={() => onUploadProof && onUploadProof(item, 'view')} className="text-primary hover:text-blue-700 dark:hover:text-blue-400 text-sm font-semibold">Lihat Bukti</button>
+                                                    ) : item.status === 'REJECTED' ? (
+                                                        <button onClick={() => {
+                                                            setSelectedMonth(item.month);
+                                                            setSelectedYear(item.year);
+                                                            setAmount(item.amount || summary?.target || 250000);
+                                                            setIsUploadModalOpen(true);
+                                                        }} className="text-primary hover:text-blue-700 dark:hover:text-blue-400 text-sm font-semibold">Re-upload</button>
+                                                    ) : (
+                                                        <button onClick={() => {
+                                                            setSelectedMonth(item.month);
+                                                            setSelectedYear(item.year);
+                                                            setAmount(item.amount || summary?.target || 250000);
+                                                            setIsUploadModalOpen(true);
+                                                        }} className="text-slate-400 hover:text-primary text-sm font-semibold">Unggah Bukti</button>
+                                                    )}
+
+                                                    <button onClick={() => openDetailModal(item)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-xs font-semibold text-slate-600 dark:text-slate-300 rounded-lg transition-colors">
+                                                        Detail
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -338,6 +360,8 @@ function ResidentIPL({ user, data, loading, meta, setMeta, onUploadProof, onSucc
                     </div>
                 </div>
             )}
+            {/* IPL Detail Modal */}
+            <IPLDetailModal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} data={selectedIPLData} hideAdminActions={true} />
         </div>
     );
 }

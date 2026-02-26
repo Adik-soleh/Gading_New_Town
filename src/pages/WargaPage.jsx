@@ -3,6 +3,7 @@ import WargaFormModal from '../components/WargaFormModal';
 import { households, residents } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import ResidentWarga from '../components/ResidentWarga';
+import { Toast, confirmDialog } from '../lib/sweetalert';
 const avatarColors = ['blue', 'purple', 'amber', 'emerald', 'pink', 'red', 'teal', 'cyan'];
 
 function getInitials(name) {
@@ -87,8 +88,16 @@ function WargaPage() {
 
                 if (formData.id) {
                     await residents.update(formData.id, payload);
+                    Toast.fire({
+                        icon: 'success',
+                        title: 'Data anggota keluarga berhasil diperbarui!'
+                    });
                 } else {
                     await residents.create(payload);
+                    Toast.fire({
+                        icon: 'success',
+                        title: 'Anggota keluarga baru berhasil ditambahkan!'
+                    });
                 }
             } else {
                 // RT handles full household creation/updates via households API
@@ -124,16 +133,36 @@ function WargaPage() {
             handleCloseModal();
         } catch (err) {
             console.error('Failed to save data:', err);
+            Toast.fire({
+                icon: 'error',
+                title: 'Gagal menyimpan data!',
+                text: err.response?.data?.message || 'Terjadi kesalahan pada server'
+            });
         }
     };
 
     const handleDeleteWarga = async (member) => {
-        if (!window.confirm(`Yakin ingin menghapus ${member.name} dari anggota keluarga?`)) return;
+        const result = await confirmDialog(
+            'Hapus Anggota Keluarga?',
+            `Yakin ingin menghapus ${member.name} dari anggota keluarga?`
+        );
+
+        if (!result.isConfirmed) return;
+
         try {
             await residents.delete(member.id);
+            Toast.fire({
+                icon: 'success',
+                title: 'Anggota keluarga berhasil dihapus!'
+            });
             loadData();
         } catch (err) {
             console.error('Failed to delete member:', err);
+            Toast.fire({
+                icon: 'error',
+                title: 'Gagal menghapus data!',
+                text: err.response?.data?.message || 'Terjadi kesalahan pada server'
+            });
         }
     };
 

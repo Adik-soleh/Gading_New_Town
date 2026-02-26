@@ -4,6 +4,7 @@ import LaporanResponseForm from '../components/LaporanResponseForm';
 import { reports } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import ResidentLapor from '../components/ResidentLapor';
+import { Toast } from '../lib/sweetalert';
 function fmtDate(d) { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
 
 const statusColors = {
@@ -44,8 +45,15 @@ function LaporPage() {
     const openDetail = (item) => { setSelectedLaporan(item); setIsDetailOpen(true); };
 
     const handleStatusChange = async (id, newStatus) => {
-        try { await reports.updateStatus(id, newStatus); loadData(); }
-        catch (err) { console.error('Status update failed:', err); }
+        try {
+            await reports.updateStatus(id, newStatus);
+            Toast.fire({ icon: 'success', title: 'Status laporan berhasil diperbarui!' });
+            loadData();
+        }
+        catch (err) {
+            console.error('Status update failed:', err);
+            Toast.fire({ icon: 'error', title: 'Gagal memperbarui status laporan!' });
+        }
     };
 
     const newCount = data.filter(d => d.status === 'NEW').length;
@@ -56,11 +64,11 @@ function LaporPage() {
     const handleAddReport = async (formData) => {
         try {
             await reports.create(formData);
+            Toast.fire({ icon: 'success', title: 'Laporan berhasil dibuat!' });
             loadData();
-            // You can also add a success toast here
         } catch (err) {
             console.error('Failed to create report:', err);
-            // You can also add an error toast here
+            Toast.fire({ icon: 'error', title: 'Gagal membuat laporan!' });
         }
     };
 

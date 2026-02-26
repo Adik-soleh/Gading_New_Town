@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityLogService } from '../activity-log/activity-log.service';
+import { NotificationService } from '../notification/notification.service';
 import { CreatePermitDto, ApprovePermitDto, RejectPermitDto, UpdatePermitDto } from './dto/permit.dto';
 import { PermitStatus } from '@prisma/client';
 
@@ -9,6 +10,7 @@ export class PermitService {
     constructor(
         private prisma: PrismaService,
         private logService: ActivityLogService,
+        private notificationService: NotificationService,
     ) { }
 
     async findAll(params: {
@@ -31,6 +33,9 @@ export class PermitService {
             if (!household) return { data: [], meta: { total: 0, page, limit, totalPages: 0 } };
             // Ensure resident can only see permits of their own household
             where.householdId = household.id;
+        } else if (user?.role === 'RT') {
+            // RT only sees permits from their managed households
+            where.household = { rtId: user.id };
         }
 
         const orderBy: any = sort === 'name'
@@ -69,6 +74,8 @@ export class PermitService {
             });
             if (!household) return { pending: 0, approved: 0, rejected: 0, total: 0 };
             where.householdId = household.id;
+        } else if (user?.role === 'RT') {
+            where.household = { rtId: user.id };
         }
 
         const [pending, approved, rejected, total] = await Promise.all([
@@ -132,6 +139,14 @@ export class PermitService {
             category: 'Permits',
             reference: `PRM-${permit.id}`,
             userId: user?.id,
+        });
+
+        // Notify RT
+        await this.notificationService.notifyHouseholdRT(householdId, {
+            type: 'PERMIT_REQUEST',
+            title: 'Pengajuan Izin Baru',
+            message: `${permit.household.headOfFamily?.name || 'Warga'} mengajukan izin ${dto.category}`,
+            referenceId: `PRM-${permit.id}`,
         });
 
         return permit;
@@ -203,6 +218,14 @@ export class PermitService {
             userId,
         });
 
+        // Notify Warga
+        await this.notificationService.notifyHouseholdWarga(permit.householdId, {
+            type: 'PERMIT_REQUEST',
+            title: 'Izin Disetujui',
+            message: `Pengajuan izin ${permit.category} Anda telah disetujui oleh RT.`,
+            referenceId: `PRM-${permit.id}`,
+        });
+
         return updated;
     }
 
@@ -223,6 +246,14 @@ export class PermitService {
             category: 'Permits',
             reference: `PRM-${permit.id}`,
             userId,
+        });
+
+        // Notify Warga
+        await this.notificationService.notifyHouseholdWarga(permit.householdId, {
+            type: 'PERMIT_REQUEST',
+            title: 'Izin Ditolak',
+            message: `Pengajuan izin ${permit.category} Anda ditolak oleh RT. ${dto.rtNotes ? 'Catatan: ' + dto.rtNotes : ''}`.trim(),
+            referenceId: `PRM-${permit.id}`,
         });
 
         return updated;

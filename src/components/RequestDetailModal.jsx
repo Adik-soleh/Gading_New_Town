@@ -139,7 +139,7 @@ function RequestDetailModal({ isOpen, onClose, data }) {
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium text-slate-900 dark:text-white">Lihat / Unduh Dokumen</p>
-                                        <p className="text-xs text-slate-500">Klik untuk membuka file {data.attachment.split('/').pop()}</p>
+                                        <p className="text-xs text-slate-500">Klik untuk membuka file {typeof data.attachment === 'string' ? data.attachment.split('/').pop() : 'dokumen'}</p>
                                     </div>
                                 </div>
                                 <span className="material-symbols-outlined text-slate-400 group-hover:text-blue-600">open_in_new</span>

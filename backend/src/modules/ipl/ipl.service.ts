@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityLogService } from '../activity-log/activity-log.service';
+import { NotificationService } from '../notification/notification.service';
 import { CreateIPLPaymentDto, VerifyIPLDto, RejectIPLDto } from './dto/ipl.dto';
 import { PaymentStatus } from '@prisma/client';
 
@@ -9,6 +10,7 @@ export class IPLService {
     constructor(
         private prisma: PrismaService,
         private logService: ActivityLogService,
+        private notificationService: NotificationService,
     ) { }
 
     async findAll(params: {
@@ -61,6 +63,8 @@ export class IPLService {
                 none: { user: { role: 'RT' } }
             }
         };
+        // RT only sees their managed households
+        if (user?.id) hWhere.rtId = user.id;
         if (block) hWhere.block = block;
 
         if (month && year) {
@@ -167,16 +171,17 @@ export class IPLService {
 
         const [totalCollected, countByStatus, allHouseholds] = await Promise.all([
             this.prisma.iPLPayment.aggregate({
-                where: { ...where, status: PaymentStatus.VERIFIED },
+                where: { ...where, status: PaymentStatus.VERIFIED, household: { rtId: user?.id } },
                 _sum: { amount: true },
             }),
             this.prisma.iPLPayment.groupBy({
                 by: ['status'],
-                where,
+                where: { ...where, household: { rtId: user?.id } },
                 _count: true,
             }),
             this.prisma.household.count({
                 where: {
+                    rtId: user?.id,
                     residents: { none: { user: { role: 'RT' } } }
                 }
             }),
@@ -263,6 +268,14 @@ export class IPLService {
                 userId: user?.id,
             });
 
+            // Notify RT
+            await this.notificationService.notifyHouseholdRT(finalHouseholdId, {
+                type: 'IPL_PAYMENT',
+                title: 'Pembayaran IPL Baru',
+                message: `${payment.household.headOfFamily?.name || 'Warga'} mengirim ulang bukti pembayaran IPL bulan ${payment.month}/${payment.year}`,
+                referenceId: `IPL-${payment.id}`,
+            });
+
             return payment;
         }
 
@@ -282,6 +295,14 @@ export class IPLService {
             category: 'Finance',
             reference: `IPL-${payment.id}`,
             userId: user?.id,
+        });
+
+        // Notify RT
+        await this.notificationService.notifyHouseholdRT(finalHouseholdId, {
+            type: 'IPL_PAYMENT',
+            title: 'Pembayaran IPL Baru',
+            message: `${payment.household.headOfFamily?.name || 'Warga'} mengirim bukti pembayaran IPL bulan ${payment.month}/${payment.year}`,
+            referenceId: `IPL-${payment.id}`,
         });
 
         return payment;
@@ -311,6 +332,14 @@ export class IPLService {
             userId,
         });
 
+        // Notify Warga
+        await this.notificationService.notifyHouseholdWarga(payment.householdId, {
+            type: 'IPL_PAYMENT',
+            title: 'Pembayaran IPL Diterima',
+            message: `Pembayaran IPL bulan ${payment.month}/${payment.year} telah diverifikasi.`,
+            referenceId: `IPL-${payment.id}`,
+        });
+
         return updated;
     }
 
@@ -336,6 +365,55 @@ export class IPLService {
             userId,
         });
 
+        // Notify Warga
+        await this.notificationService.notifyHouseholdWarga(payment.householdId, {
+            type: 'IPL_PAYMENT',
+            title: 'Pembayaran IPL Ditolak',
+            message: `Pembayaran IPL bulan ${payment.month}/${payment.year} ditolak. ${dto.notes ? 'Alasan: ' + dto.notes : ''}`.trim(),
+            referenceId: `IPL-${payment.id}`,
+        });
+
         return updated;
+    }
+
+    async sendReminder(householdId: number, month: number, year: number, userId?: string) {
+        const household = await this.prisma.household.findUnique({
+            where: { id: householdId },
+        });
+        if (!household) throw new NotFoundException('Household not found');
+
+        // Check if there is already a payment
+        const existing = await this.prisma.iPLPayment.findUnique({
+            where: {
+                householdId_month_year: {
+                    householdId,
+                    month,
+                    year,
+                },
+            },
+        });
+
+        if (existing && existing.status !== PaymentStatus.REJECTED && existing.status !== PaymentStatus.PENDING && existing.status !== PaymentStatus.VERIFIED) {
+            // Unpaid is fine
+        } else if (existing && (existing.status === PaymentStatus.VERIFIED || existing.status === PaymentStatus.PENDING)) {
+            throw new BadRequestException('Payment already pending or verified for this period');
+        }
+
+        await this.logService.log({
+            action: `Sent IPL payment reminder for household ${household.kkNumber} (${month}/${year})`,
+            category: 'Finance',
+            reference: `REM-${household.id}-${month}-${year}`,
+            userId,
+        });
+
+        // Notify Warga
+        await this.notificationService.notifyHouseholdWarga(householdId, {
+            type: 'IPL_PAYMENT',
+            title: 'Tagihan IPL',
+            message: `Mohon segera melakukan pembayaran IPL untuk bulan ${month}/${year}.`,
+            referenceId: `REM-${household.id}-${month}-${year}`,
+        });
+
+        return { success: true };
     }
 }

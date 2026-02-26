@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './context/AuthContext'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -15,6 +16,7 @@ import LogPage from './pages/LogPage'
 function App() {
     return (
         <AuthProvider>
+            <Toaster position="top-right" />
             <BrowserRouter>
                 <Routes>
                     <Route path="/" element={<ResidentLoginPage />} />

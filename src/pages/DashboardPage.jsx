@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { dashboard } from '../lib/api';
 import ResidentDashboard from '../components/ResidentDashboard';
 function DashboardPage() {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [stats, setStats] = useState({ activeFamilies: 0, unpaidIPL: 0, pendingVerifications: 0, pendingPermits: 0 });
     const [chartData, setChartData] = useState([]);
     const [recentActivity, setRecentActivity] = useState([]);
@@ -234,7 +236,7 @@ function DashboardPage() {
                                 )}
                             </div>
                         </div>
-                        <button className="w-full mt-6 py-2.5 text-sm font-medium text-primary hover:bg-primary/5 rounded-lg transition-colors">
+                        <button onClick={() => navigate('/log')} className="w-full mt-6 py-2.5 text-sm font-medium text-primary hover:bg-primary/5 rounded-lg transition-colors">
                             View All Activity
                         </button>
                     </div>
