@@ -7,6 +7,7 @@ function LoginPage() {
     const { login, user, loading: authLoading } = useAuth()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
 
@@ -147,7 +148,7 @@ function LoginPage() {
                                     <input
                                         className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-[#f6f6f8] dark:bg-slate-800 text-slate-900 dark:text-white focus:border-primary-blue focus:ring-1 focus:ring-primary-blue h-12 pl-4 pr-10 text-base placeholder:text-slate-400"
                                         placeholder="Enter your password"
-                                        type="password"
+                                        type={showPassword ? 'text' : 'password'}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
@@ -155,8 +156,11 @@ function LoginPage() {
                                     <button
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex items-center"
                                         type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
                                     >
-                                        <span className="material-symbols-outlined text-xl">visibility</span>
+                                        <span className="material-symbols-outlined text-xl">
+                                            {showPassword ? 'visibility_off' : 'visibility'}
+                                        </span>
                                     </button>
                                 </div>
                             </label>
