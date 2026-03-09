@@ -1,6 +1,6 @@
 # 🏙️ Gading New Town - Dashboard Manajemen Perumahan
 
-Gading New Town Dashboard adalah aplikasi sistem informasi manajemen perumahan berbasis web yang dirancang untuk memudahkan interaksi antara Pengurus RT (Admin) dengan Warga. Aplikasi ini mengelola berbagai kebutuhan administratif mulai dari data warga, data keluarga, iuran bulanan (IPL), pengajuan izin renovasi, pencatatan mutasi, hingga pelaporan atau pengaduan warga.
+Gading New Town Dashboard adalah aplikasi sistem informasi manajemen perumahan berbasis web yang dirancang untuk memudahkan interaksi antara Pengurus RT (Admin) dengan Warga. Aplikasi ini mengelola berbagai kebutuhan administratif mulai dari data warga, data keluarga, iuran bulanan (IPL), pengajuan izin renovasi, pencatatan mutasi, hingga pelaporan atau pengaduan warga1.
 
 ## 🚀 Fitur Utama
 
