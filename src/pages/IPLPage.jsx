@@ -145,6 +145,31 @@ function IPLPage() {
 
     const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
+    const filterButtonClass = (status, activeStatus) => {
+        const base = 'px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors';
+        const variants = {
+            '': {
+                active: 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white',
+                inactive: 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700',
+            },
+            PENDING: {
+                active: 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600',
+                inactive: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800 dark:hover:bg-amber-900/35',
+            },
+            VERIFIED: {
+                active: 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700',
+                inactive: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800 dark:hover:bg-emerald-900/35',
+            },
+            REJECTED: {
+                active: 'bg-rose-600 text-white border-rose-600 hover:bg-rose-700',
+                inactive: 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 dark:bg-rose-900/20 dark:text-rose-300 dark:border-rose-800 dark:hover:bg-rose-900/35',
+            },
+        };
+
+        const variant = variants[status] || variants[''];
+        return `${base} ${activeStatus === status ? variant.active : variant.inactive}`;
+    };
+
     const isWarga = user?.role === 'WARGA';
 
     const handleUploadProof = (item, action) => {
@@ -237,7 +262,7 @@ function IPLPage() {
                         </select>
                     </div>
                     {user?.role !== 'WARGA' && (
-                        <button onClick={handleExportExcel} className="h-[38px] px-4 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors shadow-lg shadow-green-600/25 flex items-center gap-2">
+                        <button onClick={handleExportExcel} className="h-[38px] px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-600/25 flex items-center gap-2 border border-emerald-700/20">
                             <span className="material-symbols-outlined text-[18px]">table_view</span>
                             <span>Export Excel</span>
                         </button>
@@ -298,10 +323,7 @@ function IPLPage() {
                             <button
                                 key={s}
                                 onClick={() => { setStatusFilter(s); setMeta(m => ({ ...m, page: 1 })); }}
-                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${statusFilter === s
-                                    ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                                    : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
-                                    }`}
+                                className={filterButtonClass(s, statusFilter)}
                             >
                                 {s === '' ? 'All' : s === 'VERIFIED' ? 'Lunas' : s === 'PENDING' ? 'Pending' : 'Ditolak'}
                             </button>
@@ -362,7 +384,7 @@ function IPLPage() {
                                             {item.proofImage ? (
                                                 <button
                                                     onClick={() => openPreview(item.proofImage.startsWith('http') ? item.proofImage : `http://localhost:3001${item.proofImage}`)}
-                                                    className="inline-flex items-center gap-1.5 text-ipl-primary hover:text-blue-700 text-sm font-medium transition-colors"
+                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 dark:bg-sky-900/20 dark:text-sky-300 dark:border-sky-800 dark:hover:bg-sky-900/35 text-sm font-medium transition-colors"
                                                 >
                                                     <span className="material-symbols-outlined text-[18px]">image</span>
                                                     <span>Lihat Bukti</span>
@@ -370,7 +392,7 @@ function IPLPage() {
                                             ) : (
                                                 <button
                                                     onClick={() => openDetail(item)}
-                                                    className="inline-flex items-center gap-1.5 text-slate-400 hover:text-ipl-primary text-sm font-medium transition-colors"
+                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-600 text-sm font-medium transition-colors"
                                                 >
                                                     <span className="material-symbols-outlined text-[18px]">visibility</span>
                                                     <span>Lihat</span>
@@ -382,20 +404,20 @@ function IPLPage() {
                                             <div className="flex items-center justify-end gap-2">
                                                 {isPending && user?.role !== 'WARGA' ? (
                                                     <>
-                                                        <button onClick={() => openConfirm('approve', item)} className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors" title="Verifikasi">
+                                                        <button onClick={() => openConfirm('approve', item)} className="p-1.5 text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-800 dark:hover:bg-emerald-900/35 rounded-lg transition-colors" title="Verifikasi">
                                                             <span className="material-symbols-outlined text-[20px]">check_circle</span>
                                                         </button>
-                                                        <button onClick={() => openConfirm('reject', item)} className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Tolak">
+                                                        <button onClick={() => openConfirm('reject', item)} className="p-1.5 text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 dark:text-rose-300 dark:bg-rose-900/20 dark:border-rose-800 dark:hover:bg-rose-900/35 rounded-lg transition-colors" title="Tolak">
                                                             <span className="material-symbols-outlined text-[20px]">cancel</span>
                                                         </button>
                                                     </>
                                                 ) : (
-                                                    <button onClick={() => openDetail(item)} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-xs text-slate-600 dark:text-slate-300 rounded transition-colors">
+                                                    <button onClick={() => openDetail(item)} className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:border-slate-600 text-xs text-slate-700 dark:text-slate-200 rounded-md transition-colors">
                                                         Detail
                                                     </button>
                                                 )}
                                                 {item.status === 'UNPAID' && user?.role !== 'WARGA' && (
-                                                    <button onClick={() => handleRemind(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="Kirim Pengingat">
+                                                    <button onClick={() => handleRemind(item)} className="p-1.5 text-sky-700 bg-sky-50 border border-sky-200 hover:bg-sky-100 dark:text-sky-300 dark:bg-sky-900/20 dark:border-sky-800 dark:hover:bg-sky-900/35 rounded-lg transition-colors" title="Kirim Pengingat">
                                                         <span className="material-symbols-outlined text-[20px]">notifications_active</span>
                                                     </button>
                                                 )}
